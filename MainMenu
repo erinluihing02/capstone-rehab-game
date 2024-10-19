@@ -1,1 +1,37 @@
 /*This is the production ready version of the main menu page*/
+
+
+
+\f0\fs24 \cf0 <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">\
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
+    <title>Flying Astro Rehab Game</title>
+    <style>
+        body {
+            background-image: url('BlankBG.jpg'); /*background image path*/
+            background-size: cover; 
+            background-repeat: no-repeat; 
+            background-position: center center; 
+            height: 100vh; 
+            margin: 0;
+            position: relative;
+        }
+        h1{
+            position: absolute;
+            top: 50%; /*centre text/
+            left: 50%; /*centre text*/
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: white; /*text colour*/
+
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Flying Astro</h1>
+</body>
+</html>
+}
