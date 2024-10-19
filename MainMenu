@@ -1,12 +1,16 @@
-/*This is the production ready version of the main menu page*/
 
+<!--
+    Cerebral Palsy Rehabilition Enhancement System Game
+    Main menu page
+    Author: Erin Lui-Hing 
+    Updated on: Oct 19th 2024
+-->
 
-
-\f0\fs24 \cf0 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">\
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flying Astro Rehab Game</title>
     <style>
         body {
@@ -16,22 +20,35 @@
             background-position: center center; 
             height: 100vh; 
             margin: 0;
-            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+        /* planet behind title*/
+        .background-image {
+            position: absolute; /* Position the image absolutely relative to the container */
+            top: 50%; /* Adjust position */
+            left: 50%; /* Center horizontally */
+           transform: translate(-50%, -50%); 
+            width: 1000px; /* image size */
+            z-index: -1; /* Put image behind the title */
+        }
+        /* text for title*/
         h1{
             position: absolute;
-            top: 50%; /*centre text/
+            top: 50%; /*centre text*/
             left: 50%; /*centre text*/
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%); 
             font-size: 3rem;
             color: white; /*text colour*/
-
         }
 
     </style>
 </head>
 <body>
-    <h1>Flying Astro</h1>
+    <div class="container">
+        <img src="flying-planet.png" alt="Flying Planet" class="background-image">
+         <h1>Flying Astro</h1>
+    </div>
 </body>
 </html>
-}
