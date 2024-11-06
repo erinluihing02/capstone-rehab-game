@@ -14,7 +14,7 @@
     <title>Flying Astro Rehab Game</title>
     <style>
         body {
-            background-image: url('BlankBG.jpg'); /*background image path*/
+            background-image: url('Blank_BG.png'); /*background image path*/
             background-size: cover; 
             background-repeat: no-repeat; 
             background-position: center center; 
