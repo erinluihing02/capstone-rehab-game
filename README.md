@@ -25,12 +25,12 @@ Add videos or screenshots once software and hardware are integrated
 
 
 ## Features
-Start Page 
-How to play page 
-Bluetooth Connection Page 
-Character Selection Page 
-Try Again Page & Star Grading 
-Main Game Screen 
+- Start Page 
+- How to play page 
+- Bluetooth Connection Page 
+- Character Selection Page 
+- Try Again Page & Star Grading 
+- Main Game Screen 
 
 
 ## Contributing
