@@ -26,7 +26,7 @@ Add videos or screenshots once software and hardware are integrated
 
 ## Features
 - Start Page 
-- How to play page 
+- How to Play Page 
 - Bluetooth Connection Page 
 - Character Selection Page 
 - Try Again Page & Star Grading 
