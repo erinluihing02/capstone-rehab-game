@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Game</title>
+    <style>
+        body {
+          background: url('Blank_BG.png') no-repeat center center fixed;
+          background-size: cover;
+          margin: 0;
+          overflow: hidden; /* Prevent scrolling */
+          font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body onload="startGame()">
+<script>
+    var myGamePiece;
+    var obstacles = [];
+    var myScore;
+    var floatingUp = true; // Control the up and down floating motion
+
+    function startGame() {
+        // Initialize the game piece
+        myGamePiece = new component(250, 250, "FlyingSpaceMan.png", 150, window.innerHeight / 2, "image");
+        
+        // Initialize the score display
+        myScore = new component("30px", "Consolas", "white", 50, 50, "text");
+        myGameArea.start();
+
+        // Define cloud positioning logic
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const minDistance = 200; // Minimum vertical distance between clouds
+        const cloudWidth = 400;  // Approximate width of cloud
+        const cloudHeight = 200; // Approximate height of cloud
+
+        for (let i = 0; i < 2; i++) {
+            let xPosition = screenWidth / 4 + i * (screenWidth / 2) + Math.random() * 100; // Spread clouds horizontally
+            let yPosition = Math.random() * (screenHeight - cloudHeight);
+
+            if (i === 1) {
+                while (Math.abs(yPosition - obstacles[0]?.y) < minDistance) {
+                    yPosition = Math.random() * (screenHeight - cloudHeight);
+                }
+            }
+
+            obstacles.push(new component(cloudWidth, cloudHeight, "Cloud.png", xPosition, yPosition, "image"));
+        }
+    }
+
+
+    var myGameArea = {
+        canvas: document.createElement("canvas"),
+        start: function() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.frameNo = 0;
+            this.interval = setInterval(updateGameArea, 15); // Update every 20ms
+
+            // Adjust canvas size on window resize
+            window.addEventListener('resize', () => {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            });
+        },
+        clear: function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    };
+
+    function component(width, height, color, x, y, type) {
+        this.type = type;
+        this.width = width;
+        this.height = height;
+        this.x = x;
+        this.y = y;
+
+        if (type == "image") {
+            this.image = new Image();
+            this.image.src = color;
+        }
+
+        this.update = function() {
+            var ctx = myGameArea.context;
+            if (this.type == "text") {
+                ctx.font = this.width + " " + this.height;
+                ctx.fillStyle = color;
+                ctx.fillText(this.text, this.x, this.y);
+            } else if (this.type == "image") {
+                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            } else {
+                ctx.fillStyle = color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        this.newPos = function() {
+            this.x -= 3; // Move obstacle to the left at a slightly faster speed
+            if (this.x < -this.width) { // Reset obstacle position to the right when it goes off screen
+                this.x = myGameArea.canvas.width;
+            }
+        }
+    }
+
+    function updateGameArea() {
+        myGameArea.clear();
+        myGameArea.frameNo += 1;
+
+        // Control the floating motion of the game piece
+        if (floatingUp) {
+            myGamePiece.y -= 2; 
+            if (myGamePiece.y <= 10) { 
+                floatingUp = false;
+            }
+        } else {
+            myGamePiece.y += 2; 
+            if (myGamePiece.y >= myGameArea.canvas.height - 100) { 
+                floatingUp = true;
+            }
+        }
+
+        // Update and draw obstacles
+        for (let i = 0; i < obstacles.length; i++) {
+            obstacles[i].newPos(); 
+            obstacles[i].update(); 
+
+            // Check for collision with clouds
+            if (obstacles[i].image.src.includes("Cloud.png") && checkCollision(myGamePiece, obstacles[i])) {
+                // Move myGamePiece away from the cloud
+                if (myGamePiece.x < obstacles[i].x) {
+                    myGamePiece.x += 5; // Move left to avoid
+		            myGamePiece.y -= 5;   // Swiftly move up
+                } else {
+                    myGamePiece.x += 5; // Move right to avoid
+                }
+
+                if (myGamePiece.y < obstacles[i].y) {
+                    myGamePiece.y -= 5; // Move up to avoid
+                } else {
+                    myGamePiece.y += 5; // Move down to avoid
+                }
+            }
+        }
+
+        // Update score and game piece
+        myScore.text = "SCORE: " + myGameArea.frameNo;
+        myScore.update();
+        myGamePiece.update();
+    }
+
+    // Function to check for collisions
+    function checkCollision(piece, obstacle) {
+        return (
+            piece.x < obstacle.x + obstacle.width &&
+            piece.x + piece.width > obstacle.x &&
+            piece.y < obstacle.y + obstacle.height &&
+            piece.y + piece.height > obstacle.y
+        );
+    }
+
+
+</script>
+</body>
+</html>
