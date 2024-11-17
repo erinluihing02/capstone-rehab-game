@@ -2,7 +2,7 @@
     Cerebral Palsy Rehabilition Enhancement System Game
     Bluetooth Connection page
     Author: Logain Sayed Ahmed 
-    Updated on: Oct 20th 2024
+    Updated on: Nov 17th 2024
 -->
 
 <!DOCTYPE html>
@@ -68,12 +68,12 @@
 </head>
 <body>
 
-  <h1>Connect to Bluetooth Device</h1>
+  <h1>Connect to Your Suit</h1>
 
   <!-- Add your small image here -->
   <img src="Connection_Vest.png" alt="Small Icon" />
 
-  <button id="connectButton">Connect to Device</button>
+  <button id="connectButton">Connect to Suit</button>
   <p id="status">Status: Not connected</p>
   <button id="nextPageButton">Next Page</button>
 
@@ -99,12 +99,13 @@
 
     // Navigate to next page
     function goToNextPage() {
-      window.location.href = 'nextPage.html'; // Replace with the actual next page
+      window.location.href = 'CharacterSelection.html'; 
     }
 
     // Event listeners
     connectButton.addEventListener('click', checkBluetoothConnection);
     nextPageButton.addEventListener('click', goToNextPage);
+    // probably need to add how to play game
   </script>
 
 </body>
