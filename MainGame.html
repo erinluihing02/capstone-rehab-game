@@ -1,3 +1,9 @@
+<!--
+    Cerebral Palsy Rehabilition Enhancement System Game
+    Main Game page
+    Author: logain Sayed Ahmed
+    Updated on: Nov 17th 2024
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,32 +18,70 @@
           overflow: hidden; /* Prevent scrolling */
           font-family: Arial, sans-serif;
         }
+        #message {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 50px;
+          color: white;
+          display: none;
+          text-align: center;
+        }
     </style>
 </head>
 <body onload="startGame()">
+<div id="message">LEVEL UP!<br>Onto a new galaxy!</div>
 <script>
     var myGamePiece;
     var obstacles = [];
     var myScore;
-    var floatingUp = true; // Control the up and down floating motion
+    var myTimer;
+    var floatingUp = true; 
+    var countdown = 60; 
+    var timerInterval;
+    var minY = 10;
+    var maxY = window.innerHeight - 200;
+    var isLevelTwo = false; // Track if it's the second level
+    var playerControl = false; // Enable control by spacebar in the second level
+    var spacePressed = false; // Track space bar press state
 
     function startGame() {
-        // Initialize the game piece
         myGamePiece = new component(250, 250, "FlyingSpaceMan.png", 150, window.innerHeight / 2, "image");
-        
-        // Initialize the score display
         myScore = new component("30px", "Consolas", "white", 50, 50, "text");
+        myTimer = new component("30px", "Consolas", "white", window.innerWidth - 300, 50, "text");
+        myTimer.text = "TIMER: " + countdown + "s"; 
         myGameArea.start();
 
-        // Define cloud positioning logic
+        obstaclegeneration();
+
+        // Start countdown timer
+        timerInterval = setInterval(updateTimer, 1000);
+        setTimeout(function() {
+            clearInterval(timerInterval);
+            document.getElementById('message').style.display = 'block';
+            setTimeout(function() {
+                isLevelTwo = true; // Move to second level
+                document.getElementById('message').style.display = 'none';
+                countdown = 60; // Reset the timer for new level
+                playerControl = true; // Enable player control
+                myGameArea.frameNo = 0; // Reset score/frame count
+                myGamePiece.x = 500;  // Set to your desired initial X position
+                myGamePiece.y = 200;  // Set to your desired initial Y position
+            }, 5000);
+        }, 10000); // Stop the game after 60 seconds   --> change this to change the game time
+    }
+
+    function obstaclegeneration(){
+        //Cloud obstacle logic
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        const minDistance = 200; // Minimum vertical distance between clouds
-        const cloudWidth = 400;  // Approximate width of cloud
-        const cloudHeight = 200; // Approximate height of cloud
+        const minDistance = 200;
+        const cloudWidth = 300;
+        const cloudHeight = 100;
 
         for (let i = 0; i < 2; i++) {
-            let xPosition = screenWidth / 4 + i * (screenWidth / 2) + Math.random() * 100; // Spread clouds horizontally
+            let xPosition = screenWidth / 4 + i * (screenWidth / 2) + Math.random() * 100;
             let yPosition = Math.random() * (screenHeight - cloudHeight);
 
             if (i === 1) {
@@ -50,7 +94,6 @@
         }
     }
 
-
     var myGameArea = {
         canvas: document.createElement("canvas"),
         start: function() {
@@ -59,19 +102,30 @@
             this.context = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
             this.frameNo = 0;
-            this.interval = setInterval(updateGameArea, 15); // Update every 20ms
+            this.interval = setInterval(updateGameArea, 15); 
 
-            // Adjust canvas size on window resize
             window.addEventListener('resize', () => {
                 this.canvas.width = window.innerWidth;
                 this.canvas.height = window.innerHeight;
+            });
+
+            // Add key event listeners for space bar control
+            window.addEventListener('keydown', function(e) {
+                if (e.code === 'Space') {
+                    spacePressed = true;
+                }
+            });
+
+            window.addEventListener('keyup', function(e) {
+                if (e.code === 'Space') {
+                    spacePressed = false;
+                }
             });
         },
         clear: function() {
             this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
     };
-
     function component(width, height, color, x, y, type) {
         this.type = type;
         this.width = width;
@@ -99,8 +153,8 @@
         }
 
         this.newPos = function() {
-            this.x -= 3; // Move obstacle to the left at a slightly faster speed
-            if (this.x < -this.width) { // Reset obstacle position to the right when it goes off screen
+            this.x -= 3; 
+            if (this.x < -this.width) { 
                 this.x = myGameArea.canvas.width;
             }
         }
@@ -110,58 +164,122 @@
         myGameArea.clear();
         myGameArea.frameNo += 1;
 
-        // Control the floating motion of the game piece
-        if (floatingUp) {
-            myGamePiece.y -= 2; 
-            if (myGamePiece.y <= 10) { 
-                floatingUp = false;
+        if (isLevelTwo && playerControl) {
+            // Level 2: Control movement with space bar
+            if (spacePressed) {
+                myGamePiece.y -= 2; // Move up while space is pressed
+            } else {
+                myGamePiece.y += 2; // Fall down when not pressing space
             }
-        } else {
-            myGamePiece.y += 2; 
-            if (myGamePiece.y >= myGameArea.canvas.height - 100) { 
-                floatingUp = true;
+            // Prevent flying out of bounds
+            if (myGamePiece.y < minY) myGamePiece.y = minY;
+            if (myGamePiece.y > maxY) myGamePiece.y = maxY;
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].newPos(); 
+                obstacles[i].update(); 
+                
+                // Check if the obstacle is a cloud and collision occurs
+                if (obstacles[i].image.src.includes("Cloud.png") && checkCollision(myGamePiece, obstacles[i])){
+                    endGame(); // Stop game and redirect
+                    return;
+                }
+            }
+
+        } else if (!isLevelTwo) {
+            // Level 1: Auto-floating logic
+            if (floatingUp) {
+                myGamePiece.y -= 2; 
+                if (myGamePiece.y <= minY) { 
+                    floatingUp = false;
+                }
+            } else {
+                myGamePiece.y += 2; 
+                if (myGamePiece.y >= maxY) { 
+                    floatingUp = true;
+                }
+            }
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].newPos(); 
+                obstacles[i].update(); 
+
+                if (obstacles[i].image.src.includes("Cloud.png") && checkCollision(myGamePiece, obstacles[i])) {
+                    if (myGamePiece.x < obstacles[i].x) {
+                        myGamePiece.x -= 8;
+                        myGamePiece.y -= 8;   
+                    } else {
+                        myGamePiece.x += 8; 
+                    }
+
+                    if (myGamePiece.y < obstacles[i].y) {
+                        myGamePiece.y -= 8; 
+                    } else {
+                        myGamePiece.y += 8; 
+                    }
+                }
+            }
+            // Narrow bounds every 5 seconds
+            if (myGameArea.frameNo % (5 * 60 * 1000 / 15) === 0) {
+                minY += 5;
+                maxY -= 5;
+                if (maxY - minY < 50) { 
+                    minY = Math.max(minY, maxY - 50);
+                }
             }
         }
 
-        // Update and draw obstacles
-        for (let i = 0; i < obstacles.length; i++) {
-            obstacles[i].newPos(); 
-            obstacles[i].update(); 
 
-            // Check for collision with clouds
-            if (obstacles[i].image.src.includes("Cloud.png") && checkCollision(myGamePiece, obstacles[i])) {
-                // Move myGamePiece away from the cloud
-                if (myGamePiece.x < obstacles[i].x) {
-                    myGamePiece.x += 5; // Move left to avoid
-		            myGamePiece.y -= 5;   // Swiftly move up
-                } else {
-                    myGamePiece.x += 5; // Move right to avoid
-                }
-
-                if (myGamePiece.y < obstacles[i].y) {
-                    myGamePiece.y -= 5; // Move up to avoid
-                } else {
-                    myGamePiece.y += 5; // Move down to avoid
-                }
-            }
-        }
-
-        // Update score and game piece
         myScore.text = "SCORE: " + myGameArea.frameNo;
         myScore.update();
+        myTimer.update();
         myGamePiece.update();
     }
 
-    // Function to check for collisions
-    function checkCollision(piece, obstacle) {
-        return (
-            piece.x < obstacle.x + obstacle.width &&
-            piece.x + piece.width > obstacle.x &&
-            piece.y < obstacle.y + obstacle.height &&
-            piece.y + piece.height > obstacle.y
-        );
+    function updateTimer() {
+        countdown--;
+        myTimer.text = "TIMER: " + countdown + "s";
+        if (countdown <= 0) {
+            myTimer.text = "TIMER: 0s";
+        }
     }
 
+    function checkCollision(piece, obstacle) {
+        if (isLevelTwo){
+            var buffer = 100; // Adjust this value to reduce the collision area
+        }
+        else{
+            var buffer = 70; // Adjust this value to reduce the collision area
+        }
+        let myLeft = myGamePiece.x + buffer;
+        let myRight = myGamePiece.x + myGamePiece.width - buffer;
+        let myTop = myGamePiece.y + buffer;
+        let myBottom = myGamePiece.y + myGamePiece.height - buffer;
+
+        let obstacleLeft = obstacle.x;
+        let obstacleRight = obstacle.x + obstacle.width;
+        let obstacleTop = obstacle.y;
+        let obstacleBottom = obstacle.y + obstacle.height;
+
+        let crash = !(myBottom < obstacleTop || 
+                    myTop > obstacleBottom || 
+                    myRight < obstacleLeft || 
+                    myLeft > obstacleRight);
+        return crash;
+    }
+    // Function to handle game ending
+    function endGame() {
+        clearInterval(timerInterval); // Stop the game loop if running
+        myGameArea.clear(); // Clear the game area
+        // Display "Game Over!" in the middle of the screen
+        myGameArea.context.font = "40px Arial"; // Set font size and style
+        myGameArea.context.fillStyle = "white"; // Set text color
+        myGameArea.context.textAlign = "center"; // Center the text horizontally
+        myGameArea.context.fillText("Game Over!", myGameArea.canvas.width / 2, myGameArea.canvas.height / 2);
+        // Add a delay before redirecting to the try again page
+        setTimeout(() => {
+            window.location.href = "TryAgain.html"; // Redirect after 2 seconds
+        }, 1500); // 1500 milliseconds = 1.5 seconds
+        
+    }
 
 </script>
 </body>
