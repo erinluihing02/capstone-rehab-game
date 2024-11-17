@@ -1,0 +1,134 @@
+<!--
+    Cerebral Palsy Rehabilition Enhancement System Game
+    Bluetooth Connection page
+    Author: Nadeen Mortaja
+    Updated on: Oct 20th 2024
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Selection</title>
+
+    <!-- CSS Styles -->
+    <style>
+        /* Style the body with a font and background image */
+        body {
+            font-family: Arial, sans-serif;  /* Set the font to Arial */
+            text-align: center;  /* Center-align the text */
+            margin-top: 50px;  /* Add a 50px margin at the top */
+            background-image: url('Blank_BG.png'); /* Set the background image */
+            background-size: cover;  /* Ensure the background image covers the entire page */
+            background-position: center;  /* Center the background image */
+            background-repeat: no-repeat;  /* Prevent the background image from repeating */
+        }
+
+        /* Style for each character block */
+        .character {
+            display: inline-block;  /* Display the characters inline, but allow block properties like padding */
+            padding: 20px;  /* Add 20px padding inside each character block */
+            margin: 10px;  /* Add 10px margin outside each character block */
+            border: 5px solid #ffffff; /* Create a white border with 5px thickness */
+            cursor: pointer;  /* Change the cursor to a pointer when hovering over the character */
+            background-color: transparent; /* Make the background of each character transparent */
+        }
+
+        /* Style for each character image */
+        .character img {
+            width: 200px;  /* Set the width of the character images to 160px */
+            height: 300px; /* Set the height of the character images to 210px */
+            object-fit: contain;  /* Ensure the image fits within the set dimensions without being distorted */
+        }
+
+        /* Add a red border and jump animation when a character is selected */
+        .selected {
+            border-color: red;  /* Change the border color to red when selected */
+            animation: jump 0.5s ease;  /* Apply the 'jump' animation over 0.5 seconds with ease timing */
+        }
+
+        /* Define the 'jump' animation */
+        @keyframes jump {
+            0% { transform: translateY(0); }      /* Start at the original position */
+            50% { transform: translateY(-20px); } /* Move up by 20px at the middle of the animation */
+            100% { transform: translateY(0); }    /* Return to the original position */
+        }
+
+        /* Style for the header image */
+        .header {
+            width: 300px; /* Set the width of the header image */
+            height: auto; /* Auto-adjust height based on aspect ratio */
+            margin-bottom: 20px; /* Add spacing below the header */
+        }
+
+        /* Style for the selected character name */
+        #selectedCharacter {
+            color: #ffffff; /* Set the font color to white */
+            font-size: 24px; /* Increase font size */
+            margin-top: 20px; /* Add some spacing above the text */
+        }
+    </style>
+</head>
+<body>
+
+<!-- Heading for the page -->
+<img src="Header.png" alt="Header" class="header">
+
+<!-- Character selection container -->
+<div id="characters">
+    <!-- Character 1 -->
+    <div class="character" onclick="selectCharacter('Character 1')">
+        <img src="Character1.png" alt="Character 1"> <!-- Image of Character 1 with alt text 'Character 1' -->
+    </div>
+
+    <!-- Character 2 -->
+    <div class="character" onclick="selectCharacter('Character 2')">
+        <img src="Character2.png" alt="Character 2"> <!-- Image of Character 2 with alt text 'Character 2' -->
+    </div>
+
+    <!-- Character 3 -->
+    <div class="character" onclick="selectCharacter('Character 3')">
+        <img src="Character3.png" alt="Character 3"> <!-- Image of Character 3 with alt text 'Character 3' -->
+    </div>
+
+    <!-- Character 4 -->
+    <div class="character" onclick="selectCharacter('Character 4')">
+        <img src="Character4.png" alt="Character 4"> <!-- Image of Character 4 with alt text 'Character 4' -->
+    </div>
+</div>
+
+<!-- Text to display the selected character -->
+<h2 id="selectedCharacter">No character selected</h2>
+
+<!-- JavaScript to handle character selection -->
+<script>
+    function selectCharacter(characterName) {
+    // Define character names mapping
+    const characterNames = {
+        "Character 1": "TOBBY",   // Character 1 will be named "TOBBY"
+        "Character 2": "BLOOM", // Character 2 will be named "BLOOM"
+        "Character 3": "COSMO", // Character 3 will be named "COSMO"
+        "Character 4": "LUNA"   // Character 4 will be named "LUNA"
+    };
+
+    // Clear previous selection
+    let characterDivs = document.querySelectorAll('.character');
+    characterDivs.forEach(function (div) {
+        div.classList.remove('selected');
+    });
+
+    // Update selected character display using the character's name from the mapping
+    document.getElementById('selectedCharacter').textContent = characterNames[characterName];
+
+    // Highlight the selected character and make it jump
+    let selectedDiv = [...characterDivs].find(div => {
+        return div.querySelector('img').alt === characterName;
+    });
+    selectedDiv.classList.add('selected');
+    }
+
+</script>
+<button onclick="window.location.href='MainGame.html';">Play</button>  
+
+</body>
+</html>
