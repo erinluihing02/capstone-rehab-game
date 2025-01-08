@@ -2,8 +2,7 @@
     Cerebral Palsy Rehabilition Enhancement System Game
     How To Play page
     Author: Erin Lui-Hing, adapted from Logain Sayed Ahmed
-    Updated on: Nov 17th 2024
-  Next: include a dunction toe stop movement and resume movement to dispaly different steps
+    Updated on: Dec 23th 2024
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -40,11 +39,23 @@
           display: none;
           text-align: center;
         }
+        #message3 { 
+          position: absolute; 
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 50px;
+          color: white;
+          display: none;
+          text-align: center;
+        }
     </style>
 </head>
 <body onload="startGame()">
 <div id="message1"> ASTRONAUT TRAINING!</div> /* Tutorial beginning message */
 <div id="message2"> LEVEL 2 ASTRONAUT TRAINING!</div> /* Tutorial for level 2 beginning message */
+<div id="message3"> DEBUGGING!</div> 
+
 <script>
     var myGamePiece;
     var obstacles = [];
@@ -55,45 +66,76 @@
     var timerInterval;
     var minY = 10;
     var maxY = window.innerHeight - 200;
-    var tutorialStartLvl2 = false; // Track if it's the second level
+    var pauseGame = false;
+    var tutorialStartLvl2 = false; // Track the  level
     var playerControl = false; // Enable control by spacebar in the second level
     var spacePressed = false; // Track space bar press state
 
+
     function startGame() {
+        
         myGamePiece = new component(250, 250, "FlyingSpaceMan.png", 150, window.innerHeight / 2, "image");
         myScore = new component("30px", "Consolas", "white", 50, 50, "text");
         myTimer = new component("30px", "Consolas", "white", window.innerWidth - 300, 50, "text");
         myTimer.text = "TIMER: " + countdown + "s"; 
         myGameArea.start();
+        timerInterval = setInterval(updateTimer, 1000);
 
+        //generate the cloud obstacles
         obstaclegeneration();
 
-        displayTutorial("Welcome to Training!", 2000, function() {
-        // Pause and display second message after 2 seconds
-        displayTutorial("Sit up straight to keep moving!", 2000, function() {
-            // Pause and display third message after another 2 seconds
-            displayTutorial("Don't hit the clouds", 2000, function() {
-            
-            });
-        });
-    });
+        //display text
+        displayText("Welcome To Training", 5000); //First text to start tutorial
+
+        setTimeout(() => {
+            displayText("Don't hit the clouds", 5000); //Instruction to appear after welcome message is gone
+        }, 5000);
+
+
+        //pause and display instructions 
+        //stopGame(2000);
+    
 
         // Start countdown timer
-        timerInterval = setInterval(updateTimer, 1000); 
         setTimeout(function() {
             clearInterval(timerInterval);
-            document.getElementById('message2').style.display = 'block';
+            //document.getElementById('message2').style.display = 'block';
             setTimeout(function() {
                 tutorialStartLvl2 = true; // begin tutorial 
-                document.getElementById('message2').style.display = 'none';
-                countdown = 60; // Reset the timer for new level
+               // document.getElementById('message2').style.display = 'none';
+                countdown = 60; // Reset the timer
                 playerControl = true; // Enable player control
                 myGameArea.frameNo = 0; // Reset score/frame count
                 myGamePiece.x = 500;  // Set to your desired initial X position
                 myGamePiece.y = 200;  // Set to your desired initial Y position
             }, 5000);
-        }, 6000); // Stop the game after 60 seconds   --> change this to change the game time
+        }, 10000); // changes the game time to stop after
+
+
+        //delay before pausing for first instruction 
+        setTimeout(() => {}, 50000);
+        //stopGame(2000);
     }
+
+
+    function displayText(message, duration) {
+        
+        const displayMessage = document.getElementById('message3');
+        // start delay for the message 
+        setTimeout(() => {
+            // Show the tutorial message
+            displayMessage.textContent = message; 
+            displayMessage.style.display = 'block';
+
+            setTimeout(() => {
+                displayMessage.style.display = 'none';
+            }, duration);
+
+        }); 
+
+        
+    };
+
 
     function obstaclegeneration(){
         //Cloud obstacle logic
@@ -118,24 +160,14 @@
     }
 
 
-    /* function to show step-by-step during the tutorial */
 
-    function displayText(message, duration, callback) {
-        // Pause gameplay 
-        clearInterval(timerInterval); // Stop the countdown timer
-        pauseObstacles(); // Pause movement
-
-        // Show the tutorial 
-        document.getElementById('message1').textContent = message;
-        document.getElementById('message1').style.display = 'block';
-
-        // timeout to hide the message and resume gameplay
-        setTimeout(function() {
-            document.getElementById('message1').style.display = 'none';
-            callback(); // Call the next tutorial step
+    //stop the game for a certian amount of time 
+    function stopGame(duration){
+        pauseGame = true;
+        setTimeout(()=> {
+            pauseGame = false;
         }, duration);
     }
-
 
 
 
@@ -209,7 +241,7 @@
         myGameArea.clear();
         myGameArea.frameNo += 1;
 
-        if (tutorialStartLvl2) {
+        if (!tutorialStartLvl2 && !pauseGame) {
             // starting tutorial
             
             // Prevent flying out of bounds
@@ -226,7 +258,7 @@
                 }
             }
 
-        } else if (!tutorialStartLvl2) {
+        } else if (tutorialStartLvl2 && !pauseGame) {
             //starting tutorial level 1: Auto-floating logic
             if (floatingUp) {
                 myGamePiece.y -= 2; 
