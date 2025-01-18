@@ -2,9 +2,9 @@
     Cerebral Palsy Rehabilition Enhancement System Game
     How To Play page
     Author: Erin Lui-Hing, adapted from Main Game page by Logain Sayed Ahmed
-    Updated on: Jan 12th, 2025
+    Updated on: Jan 17th, 2025
 
-    Updates: Tab name, all text showing properly, manual control for tutorial temporarily
+    Updates: No text wrapping, Checks if user is ready after 30 seconds 
     Note: Instructions need to be updated to be kid-friendly language
 -->
 <!DOCTYPE html>
@@ -51,6 +51,7 @@
           color: white;
           display: none;
           text-align: center;
+          white-space: nowrap; /* Avoid text on screen wrapping under*/
         }
     </style>
 </head>
@@ -97,6 +98,8 @@
                 }, 10000);
         
         }, 7000);
+
+        
 
      
 
@@ -312,9 +315,13 @@
     function updateTimer() {
         countdown--;
         myTimer.text = "TIMER: " + countdown + "s";
+        if (countdown <= 30) {
+            displayText("Are your ready to fly?", 5000);
+        }
         if (countdown <= 0) {
             myTimer.text = "TIMER: 0s";
         }
+        
     }
 
     function checkCollision(piece, obstacle) {
