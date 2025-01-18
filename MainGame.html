@@ -1,9 +1,3 @@
-<!--
-    Cerebral Palsy Rehabilition Enhancement System Game
-    Main Game page
-    Author: logain Sayed Ahmed
-    Updated on: Nov 17th 2024
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,10 +22,40 @@
           display: none;
           text-align: center;
         }
+        #bluetoothStatus {
+          position: absolute;
+          bottom: 10px;
+          right: 10px;
+          color: white;
+          background: rgba(0, 0, 0, 0.7);
+          padding: 10px;
+          border-radius: 5px;
+        }
+        #postureUpdate {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;  /* Ensures it appears above other content */
+            display: none;  /* Hide it initially */
+        }
     </style>
 </head>
 <body onload="startGame()">
+    <div id="bluetoothStatus">
+        <p id="status">Status: Not connected</p>
+        <button id="connectButton">Connect to Bluetooth</button>
+        <p id="postureStatus">Posture: Unknown</p>
+    </div>
 <div id="message">LEVEL UP!<br>Onto a new galaxy!</div>
+<div id="postureUpdate"></div>
 <script>
     var myGamePiece;
     var obstacles = [];
@@ -46,7 +70,79 @@
     var playerControl = false; // Enable control by spacebar in the second level
     var spacePressed = false; // Track space bar press state
 
+    // Bluetooth Integration
+    let serialPort;
+    let reader;
+    let decoder = new TextDecoderStream();
+    var isGameFrozen = false; // Freeze game on bad posture
+    let isBluetoothConnected = false; // Flag to track Bluetooth connection
+
+    async function connectBluetooth() {
+        const statusElement = document.getElementById("status");
+
+        try {
+            // Check for existing paired ports
+            const ports = await navigator.serial.getPorts();
+            if (ports.length > 0) {
+                // Use the first available port
+                serialPort = ports[0];
+                await serialPort.open({ baudRate: 9600 });
+                const readableStreamClosed = serialPort.readable.pipeTo(decoder.writable);
+                reader = decoder.readable.getReader();
+                statusElement.innerText = "Status: Connected (Existing Pairing)";
+                isBluetoothConnected = true; // Set flag to true when connected
+                readBluetoothData();
+            } else {
+                // No paired port found, request a new one
+                serialPort = await navigator.serial.requestPort();
+                await serialPort.open({ baudRate: 9600 });
+                const readableStreamClosed = serialPort.readable.pipeTo(decoder.writable);
+                reader = decoder.readable.getReader();
+                statusElement.innerText = "Status: Connected (New Pairing)";
+                isBluetoothConnected = true; // Set flag to true when connected
+                readBluetoothData();
+            }
+        } catch (error) {
+            statusElement.innerText = "Error: " + error.message;
+            isBluetoothConnected = false; // Reset flag if connection fails
+        }
+    }
+
+
+    async function readBluetoothData() {
+        const postureStatusElement = document.getElementById("postureStatus");
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                if (value.includes("Bad Posture Detected")) {
+                    postureStatusElement.innerText = "Posture: Bad";
+                    // Get the message element and change its text
+                    const messageElement = document.getElementById("postureUpdate");
+                    messageElement.innerText = "Mission Perfect Posture is on PAUSE!\n Time to sit up tall and get back in action!";
+                    
+                    // Show the message in the center of the screen
+                    messageElement.style.display = "block";
+                    freezeGame();
+                } else if (value.includes("Good Posture")) {
+                    postureStatusElement.innerText = "Posture: Good";
+                    const messageElement = document.getElementById("postureUpdate");
+                    messageElement.innerText = "Mission Perfect Posture is back in action!";
+                    messageElement.style.display = "block";
+            
+                    resumeGame();
+                }
+            }
+        } catch (error) {
+            console.error("Error reading Bluetooth data: " + error.message);
+        }
+    }
+
+    document.getElementById("connectButton").addEventListener("click", connectBluetooth);
+
     function startGame() {
+        connectBluetooth();
         myGamePiece = new component(250, 250, "FlyingSpaceMan.png", 150, window.innerHeight / 2, "image");
         myScore = new component("30px", "Consolas", "white", 50, 50, "text");
         myTimer = new component("30px", "Consolas", "white", window.innerWidth - 300, 50, "text");
@@ -69,7 +165,7 @@
                 myGamePiece.x = 500;  // Set to your desired initial X position
                 myGamePiece.y = 200;  // Set to your desired initial Y position
             }, 5000);
-        }, 10000); // Stop the game after 60 seconds   --> change this to change the game time
+        }, 60000); // Stop the game after 60 seconds   --> change this to change the game time
     }
 
     function obstaclegeneration(){
@@ -161,6 +257,7 @@
     }
 
     function updateGameArea() {
+        if (isGameFrozen) return;
         myGameArea.clear();
         myGameArea.frameNo += 1;
 
@@ -242,6 +339,16 @@
         }
     }
 
+    function freezeGame() {
+        isGameFrozen = true;
+    }
+
+    function resumeGame() {
+        isGameFrozen = false;
+        const messageElement = document.getElementById("postureUpdate");
+        messageElement.style.display = "none";
+    }
+
     function checkCollision(piece, obstacle) {
         if (isLevelTwo){
             var buffer = 100; // Adjust this value to reduce the collision area
@@ -277,8 +384,7 @@
         // Add a delay before redirecting to the try again page
         setTimeout(() => {
             window.location.href = "TryAgain.html"; // Redirect after 2 seconds
-        }, 1500); // 1500 milliseconds = 1.5 seconds
-        
+        }, 11); // 11 ms
     }
 
 </script>
