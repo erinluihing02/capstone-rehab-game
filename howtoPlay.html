@@ -2,9 +2,9 @@
     Cerebral Palsy Rehabilition Enhancement System Game
     How To Play page
     Author: Erin Lui-Hing, adapted from Main Game page by Logain Sayed Ahmed
-    Updated on: Jan 17th, 2025
+    Updated on: Jan 28th, 2025
 
-    Updates: No text wrapping, Checks if user is ready after 30 seconds 
+    Updates:  Added key function for user to continue (need to add image with key to press)
     Note: Instructions need to be updated to be kid-friendly language
 -->
 <!DOCTYPE html>
@@ -103,10 +103,6 @@
 
      
 
-
-        //delay before pausing for first instruction 
-        setTimeout(() => {}, 50000);
-        //stopGame(2000);
     }
 
     function displayText(message, duration) {
@@ -152,13 +148,7 @@
 
 
 
-    //stop the game for a certian amount of time 
-    function stopGame(duration){
-        pauseGame = true;
-        setTimeout(()=> {
-            pauseGame = false;
-        }, duration);
-    }
+    
 
 
 
@@ -232,6 +222,9 @@
         myGameArea.clear();
         myGameArea.frameNo += 1;
 
+        if(pauseGame){
+            return; //if the game is supposed ot be paused don't update anything or any movements
+        }
         if (!tutorialStartLvl2 && !pauseGame) {
             // starting tutorial
             
@@ -315,8 +308,10 @@
     function updateTimer() {
         countdown--;
         myTimer.text = "TIMER: " + countdown + "s";
-        if (countdown <= 30) {
-            displayText("Are your ready to fly?", 5000);
+        if (countdown == 30) {
+            displayText("Press P to Keep Practising", 3000);
+            /* How can i avoid the text blinking?*/
+            pauseGame = true; 
         }
         if (countdown <= 0) {
             myTimer.text = "TIMER: 0s";
@@ -347,6 +342,19 @@
                     myLeft > obstacleRight);
         return crash;
     }
+
+    //Keep checking for if the user wants to continue by check the P key of the computer
+
+    window.addEventListener('keydown', function (e) {
+    if (e.code === 'KeyP' && pauseGame) {
+        pauseGame = false; // Resume the game
+    }
+});
+
+
+
+
+
     // Function to handle game ending
     function endGame() {
         clearInterval(timerInterval); // Stop the game loop if running
