@@ -82,14 +82,19 @@
     const nextPageButton = document.getElementById('nextPageButton');
     const statusText = document.getElementById('status');
 
+    let serialPort;
+    let reader;
+    let decoder = new TextDecoderStream();
+
     // Function to initiate Bluetooth connection
     async function checkBluetoothConnection() {
       try {
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true
-        });
+        serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ baudRate: 9600 });
+        const readableStreamClosed = serialPort.readable.pipeTo(decoder.writable);
+        reader = decoder.readable.getReader();
 
-        statusText.textContent = `Connected to: ${device.name}`;
+        statusText.innerText = "Status: Connected";
         nextPageButton.style.display = 'inline'; // Show the next page button
       } catch (error) {
         console.error('Bluetooth connection failed:', error);
