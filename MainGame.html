@@ -57,6 +57,9 @@
 <div id="message">LEVEL UP!<br>Onto a new galaxy!</div>
 <div id="postureUpdate"></div>
 <audio id="backgroundMusic" src="background-music.mp3" preload="auto" loop></audio>
+<audio id="gameStart" src="blast_off.mp3" preload="auto" loop></audio>
+<audio id="warning" src="warning.mp3" preload="auto" loop></audio>
+<audio id="gameFail" src="fail.mp3" preload="auto" loop></audio>
 <script>
     var myGamePiece;
     var obstacles = [];
@@ -112,32 +115,55 @@
 
     async function readBluetoothData() {
         const postureStatusElement = document.getElementById("postureStatus");
+        const backgroundMusic = document.getElementById("backgroundMusic");
+        const gameStart= document.getElementById("gameStart");
+        const warning= document.getElementById("warning");
+        const gameFail = document.getElementById("gameFail");
+
         try {
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
+                if (countdown >= 55){
+                    gameStart.play();
+                    backgroundMusic.pause();
+                    gameFail.pause();
 
-                if (value.includes("Bad Posture Detected")) {
+                    freezeGame();
+                } else if (value.includes("Bad Posture Detected")) {
                     postureStatusElement.innerText = "Posture: Bad";
                     // Get the message element and change its text
                     const messageElement = document.getElementById("postureUpdate");
                     messageElement.innerText = "Mission Perfect Posture is on PAUSE!\n Time to sit up tall and get back in action!";
-                    
-                    // Show the message in the center of the screen
                     messageElement.style.display = "block";
+                    backgroundMusic.pause();
+                    gameStart.pause();
+                    warning.pause();
+                    gameStart.pause();
+                    gameFail.play();
+
                     freezeGame();
                 } else if (value.includes("Warning")) {
                     postureStatusElement.innerText = "Posture: Warning";
                     const messageElement = document.getElementById("postureUpdate");
                     messageElement.innerText = "Oopsie, It's a bit bumpy!\n Straighten Up!";
                     messageElement.style.display = "block";
-            
+                    warning.play();
+                    gameStart.pause();
+                    backgroundMusic.pause();
+                    gameFail.pause();
+                    
+                    resumeGame();
                     spinGame();
                 } else if (value.includes("Good Posture")) {
                     postureStatusElement.innerText = "Posture: Good";
                     const messageElement = document.getElementById("postureUpdate");
-                    messageElement.innerText = "Mission Perfect Posture is back in action!";
+                    messageElement.innerText = "We're back in action!";
                     messageElement.style.display = "block";
+                    backgroundMusic.play();
+                    warning.pause();
+                    gameStart.pause();
+                    gameFail.pause();
 
                     resumeGame();
                 }
@@ -152,11 +178,6 @@
 
     function startGame() {
         connectBluetooth();
-
-        const backgroundMusic = document.getElementById("backgroundMusic");
-        backgroundMusic.play().catch(error => {
-            console.error("Background music playback failed:", error);
-        });
         
         myGamePiece = new component(250, 250, "FlyingSpaceMan.png", 150, window.innerHeight / 2, "image");
         myScore = new component("30px", "Consolas", "white", 50, 50, "text");
@@ -374,12 +395,6 @@
 
     function resumeGame() {
         isGameFrozen = false;
-        const messageElement = document.getElementById("postureUpdate");
-        messageElement.style.display = "none";
-        const backgroundMusic = document.getElementById("backgroundMusic");
-        backgroundMusic.play().catch(error => {
-            console.error("Background music playback failed:", error);
-        });
     }
 
     function checkCollision(piece, obstacle) {
