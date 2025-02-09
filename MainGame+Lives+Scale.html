@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Game</title>
+    <style>
+        body {
+          background: url('Blank_BG.png') no-repeat center center fixed;
+          background-size: cover;
+          margin: 0;
+          overflow: hidden; /* Prevent scrolling */
+          font-family: Arial, sans-serif;
+        }
+        #message {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 50px;
+          color: white;
+          display: none;
+          text-align: center;
+        }
+        #bluetoothStatus {
+          position: absolute;
+          bottom: 10px;
+          right: 10px;
+          color: white;
+          background: rgba(0, 0, 0, 0.7);
+          padding: 10px;
+          border-radius: 5px;
+        }
+        #postureUpdate {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;  /* Ensures it appears above other content */
+            display: none;  /* Hide it initially */
+        }
+        #speedometer {
+            width: 250px;
+            height: 250px; /* Make the height equal to the width for a circle */
+            background: conic-gradient(
+                from 270deg,
+                rgb(27, 93, 9) 0deg 90deg,        /* Red from 0° to 90° */
+                rgb(52, 132, 30) 90deg 135deg,   /* Orange from 90° to 135° */
+                rgb(99, 193, 73) 135deg 180deg,   /* Green from 135° to 180° */
+                transparent 180deg 360deg /* Transparent from 180° to 360° */
+            );
+            border-radius: 50%; /* This creates a perfect circle */
+            border-radius: 250px 250px 0 0;  /* Creates the top-half of the circle */
+            position: fixed;
+            top: 80%;
+            right: 80%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            clip-path: ellipse(50% 50% at 50% 50%); /* Clips the circle to its top-half */
+        }
+
+
+        #needle {
+            position: absolute;
+            width: 2px;
+            height: 120px; /* Length of the needle */
+            background-color: #333;
+            top: 5px; /* Adjust the top position to make sure it's centered on the speedometer */
+            left: 50%;
+            transform-origin: bottom center; /* Rotate from the bottom */
+            transform: rotate(90deg); /* Initial position */
+            transition: transform 0.5s ease-in-out;
+        }
+
+        #value-label {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Centers the label */
+            font-size: 16px;
+            font-weight: bold;
+            color: #fdfdfd;
+        }
+
+        #container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            margin: 20px;
+        }
+    </style>
+</head>
+<div id="livesDisplay" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%);">
+    <span id="life1" style="font-size: 30px;">❤️</span>
+    <span id="life2" style="font-size: 30px;">❤️</span>
+    <span id="life3" style="font-size: 30px;">❤️</span>
+    <span id="life4" style="font-size: 30px;">❤️</span>
+    <span id="life5" style="font-size: 30px;">❤️</span>
+</div>
+<body onload="startGame()"> 
+    <div id="bluetoothStatus">
+        <p id="status">Status: Not connected</p>
+        <button id="connectButton">Connect to Bluetooth</button>
+        <p id="postureStatus">Posture: Unknown</p>
+    </div>
+    <div id="container">
+        <div id="speedometer">
+            <div id="needle"></div>
+            <div id="value-label">0.00</div>
+        </div>
+    </div>  
+<div id="message">LEVEL UP!<br>Onto a new galaxy!</div>
+<div id="postureUpdate"></div>
+<audio id="backgroundMusic" src="background-music.mp3" preload="auto" loop></audio>
+<audio id="gameStart" src="blast_off.mp3" preload="auto" loop></audio>
+<audio id="warning" src="warning.mp3" preload="auto" loop></audio>
+<audio id="gameFail" src="fail.mp3" preload="auto" loop></audio>
+<script>
+    var myGamePiece;
+    var obstacles = [];
+    var myScore;
+    var myTimer;
+    var floatingUp = true; 
+    var countdown = 60; 
+    var timerInterval;
+    var minY = 10;
+    var maxY = window.innerHeight - 200;
+    var isLevelTwo = false; // Track if it's the second level
+    var playerControl = false; // Enable control by spacebar in the second level
+    var spacePressed = false; // Track space bar press state
+    var lives = 5; // Start with 5 lives
+    var livesDisplay = []; // Array to hold life heart elements
+
+    // Bluetooth Integration
+    let serialPort;
+    let reader;
+    let decoder = new TextDecoderStream();
+    var isGameFrozen = false; // Freeze game on bad posture
+    let isBluetoothConnected = false; // Flag to track Bluetooth connection
+
+    async function connectBluetooth() {
+        const statusElement = document.getElementById("status");
+
+        try {
+            // Check for existing paired ports
+            const ports = await navigator.serial.getPorts();
+            if (ports.length > 0) {
+                // Use the first available port
+                serialPort = ports[0];
+                await serialPort.open({ baudRate: 9600 });
+                const readableStreamClosed = serialPort.readable.pipeTo(decoder.writable);
+                reader = decoder.readable.getReader();
+                statusElement.innerText = "Status: Connected (Existing Pairing)";
+                isBluetoothConnected = true; // Set flag to true when connected
+                readBluetoothData();
+            } else {
+                // No paired port found, request a new one
+                serialPort = await navigator.serial.requestPort();
+                await serialPort.open({ baudRate: 9600 });
+                const readableStreamClosed = serialPort.readable.pipeTo(decoder.writable);
+                reader = decoder.readable.getReader();
+                statusElement.innerText = "Status: Connected (New Pairing)";
+                isBluetoothConnected = true; // Set flag to true when connected
+                readBluetoothData();
+            }
+        } catch (error) {
+            statusElement.innerText = "Error: " + error.message;
+            isBluetoothConnected = false; // Reset flag if connection fails
+        }
+    }
+
+    async function readBluetoothData() {
+        const postureStatusElement = document.getElementById("postureStatus");
+        const backgroundMusic = document.getElementById("backgroundMusic");
+        const gameStart= document.getElementById("gameStart");
+        const warning= document.getElementById("warning");
+        const gameFail = document.getElementById("gameFail");
+        var badCounter = 0; 
+
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                if (value.includes("Angle:")) {
+                    let lines = value.split("\n"); // Split input by new lines
+                    for (let line of lines) { 
+                        if (line.includes("Angle:")) { // Process only the line that contains "Angle"
+                            let angleString = line.split(":")[1]; // Extract the numeric part
+                            let angle = parseFloat(angleString.trim()); // Convert to float
+                            
+                            if (!isNaN(angle)) {
+                                updateSpeedometer(angle);
+                            } else {
+                                console.error("Parsed value is not a number:", angleString);
+                            }
+                        }
+                    }
+                }
+                if (countdown >= 55){
+                    gameStart.play();
+                    backgroundMusic.pause();
+                    gameFail.pause();
+                    countdown -= 0.5;
+
+                    freezeGame();
+                }
+                if (value.includes("Bad Posture Detected")) {
+                    postureStatusElement.innerText = "Posture: Bad";
+                    // Get the message element and change its text
+                    const messageElement = document.getElementById("postureUpdate");
+                    messageElement.innerText = "Mission Perfect Posture is on PAUSE!\n Time to sit up tall and get back in action!";
+                    messageElement.style.display = "block";
+                    backgroundMusic.pause();
+                    gameStart.pause();
+                    warning.pause();
+                    gameStart.pause();
+                    gameFail.play();
+
+                    freezeGame();
+                    //loseLife(); // Decrease life when posture is bad
+                    if (badCounter == 0) {
+                            loseLife(); // Lose a life only if coming from good posture
+                            badCounter += 1;
+                    }else {
+                    }
+                } else if (value.includes("Warning")) {
+                    postureStatusElement.innerText = "Posture: Warning";
+                    const messageElement = document.getElementById("postureUpdate");
+                    messageElement.innerText = "Oopsie, It's a bit bumpy!\n Straighten Up!";
+                    messageElement.style.display = "block";
+                    warning.play();
+                    gameStart.pause();
+                    backgroundMusic.play();
+                    gameFail.pause();
+                    
+                    resumeGame();
+                    spinGame();
+                    badCounter = 0;
+                } else if (value.includes("Good Posture")) {
+                    postureStatusElement.innerText = "Posture: Good";
+                    const messageElement = document.getElementById("postureUpdate");
+                    messageElement.innerText = "We're back in action!";
+                    messageElement.style.display = "none"; // Hides it from view
+                    //messageElement.style.display = "block";
+                    backgroundMusic.play();
+                    warning.pause();
+                    gameStart.pause();
+                    gameFail.pause();
+
+                    resumeGame();
+                    badCounter = 0;
+                }
+            }
+            } catch (error) {
+            console.error("Error reading Bluetooth data: " + error.message);
+        }
+    }
+
+    document.getElementById("connectButton").addEventListener("click", connectBluetooth);
+    document.addEventListener("click", resumeGame, { once: true });
+
+    function startGame() {
+        connectBluetooth();
+        lives = 5; // Start with 5 lives
+        updateLivesDisplay();
+
+        myGamePiece = new component(250, 250, "FlyingSpaceMan.png", 150, window.innerHeight / 2, "image");
+        myScore = new component("30px", "Consolas", "white", 50, 50, "text");
+        myTimer = new component("30px", "Consolas", "white", window.innerWidth - 300, 50, "text");
+        myTimer.text = "TIMER: " + countdown + "s"; 
+        myGameArea.start();
+
+        obstaclegeneration();
+    
+        // Start countdown timer
+        timerInterval = setInterval(updateTimer, 1000);
+        setTimeout(function() {
+            clearInterval(timerInterval);
+            document.getElementById('message').style.display = 'block';
+            setTimeout(function() {
+                isLevelTwo = true; // Move to second level
+                resetLives();
+                document.getElementById('message').style.display = 'none';
+                countdown = 0; // Reset the timer for new level
+                playerControl = true; // Enable player control
+                myGameArea.frameNo = 0; // Reset score/frame count
+                myGamePiece.x = 500;  // Set to your desired initial X position
+                myGamePiece.y = 200;  // Set to your desired initial Y position
+            }, 5000);
+        }, 60000); // Stop the game after 60 seconds   --> change this to change the game time
+    }
+
+    function obstaclegeneration(){
+        //Cloud obstacle logic
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const minDistance = 350;
+        const cloudWidth = 300;
+        const cloudHeight = 100;
+
+        for (let i = 0; i < 2; i++) {
+            let xPosition = screenWidth / 4 + i * (screenWidth / 2) + Math.random() * 100;
+            let yPosition = Math.random() * (screenHeight - cloudHeight);
+
+            if (i === 1) {
+                while (Math.abs(yPosition - obstacles[0]?.y) < minDistance) {
+                    yPosition = Math.random() * (screenHeight - cloudHeight);
+                }
+            }
+
+            obstacles.push(new component(cloudWidth, cloudHeight, "Cloud.png", xPosition, yPosition, "image"));
+        }
+    }
+
+    var myGameArea = {
+        canvas: document.createElement("canvas"),
+        start: function() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.frameNo = 0;
+            this.interval = setInterval(updateGameArea, 15); 
+
+            window.addEventListener('resize', () => {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            });
+
+            // Add key event listeners for space bar control
+            window.addEventListener('keydown', function(e) {
+                if (e.code === 'Space') {
+                    spacePressed = true;
+                }
+            });
+
+            window.addEventListener('keyup', function(e) {
+                if (e.code === 'Space') {
+                    spacePressed = false;
+                }
+            });
+        },
+        clear: function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    };
+    function component(width, height, color, x, y, type) {
+        this.type = type;
+        this.width = width;
+        this.height = height;
+        this.x = x;
+        this.y = y;
+
+        if (type == "image") {
+            this.image = new Image();
+            this.image.src = color;
+        }
+
+        this.update = function() {
+            var ctx = myGameArea.context;
+            if (this.type == "text") {
+                ctx.font = this.width + " " + this.height;
+                ctx.fillStyle = color;
+                ctx.fillText(this.text, this.x, this.y);
+            } else if (this.type == "image") {
+                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            } else {
+                ctx.fillStyle = color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        this.newPos = function() {
+            this.x -= 3; 
+            if (this.x < -this.width) { 
+                this.x = myGameArea.canvas.width;
+            }
+        }
+    }
+
+    function updateGameArea() {
+        if (isGameFrozen) return;
+        myGameArea.clear();
+        myGameArea.frameNo += 1;
+
+        if (isLevelTwo && playerControl) {
+
+            // Level 2: Control movement with space bar
+            if (spacePressed) {
+                myGamePiece.y -= 2; // Move up while space is pressed
+            } else {
+                myGamePiece.y += 2; // Fall down when not pressing space
+            }
+            // Prevent flying out of bounds
+            if (myGamePiece.y < minY) myGamePiece.y = minY;
+            if (myGamePiece.y > maxY) myGamePiece.y = maxY;
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].newPos(); 
+                obstacles[i].update(); 
+                
+                // Check if the obstacle is a cloud and collision occurs
+                if (obstacles[i].image.src.includes("Cloud.png") && checkCollision(myGamePiece, obstacles[i])){
+                    loseLife();
+                    //endGame(); // Stop game and redirect
+                    return;
+                }
+            }
+
+        } else if (!isLevelTwo) {
+            // Level 1: Auto-floating logic
+            if (floatingUp) {
+                myGamePiece.y -= 2; 
+                if (myGamePiece.y <= minY) { 
+                    floatingUp = false;
+                }
+            } else {
+                myGamePiece.y += 2; 
+                if (myGamePiece.y >= maxY) { 
+                    floatingUp = true;
+                }
+            }
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].newPos(); 
+                obstacles[i].update(); 
+
+                if (obstacles[i].image.src.includes("Cloud.png") && checkCollision(myGamePiece, obstacles[i])) {
+                    if (myGamePiece.x < obstacles[i].x) {
+                        myGamePiece.x -= 8;
+                        myGamePiece.y -= 8;   
+                    } else {
+                        myGamePiece.x += 8; 
+                    }
+
+                    if (myGamePiece.y < obstacles[i].y) {
+                        myGamePiece.y -= 8; 
+                    } else {
+                        myGamePiece.y += 8; 
+                    }
+                }
+            }
+            // Narrow bounds every 5 seconds
+            if (myGameArea.frameNo % (5 * 60 * 1000 / 15) === 0) {
+                minY += 5;
+                maxY -= 5;
+                if (maxY - minY < 50) { 
+                    minY = Math.max(minY, maxY - 50);
+                }
+            }
+        }
+
+
+        myScore.text = "SCORE: " + myGameArea.frameNo;
+        myScore.update();
+        myTimer.update();
+        myGamePiece.update();
+    }
+
+    function updateTimer() {
+        countdown--;
+        myTimer.text = "TIMER: " + countdown + "s";
+        if (countdown <= 0) {
+            myTimer.text = "TIMER: 0s";
+        }
+    }
+
+    function freezeGame() {
+        isGameFrozen = true;
+    }
+
+    function spinGame(){
+        const gameCanvas = myGameArea.canvas;
+        gameCanvas.style.transition = "transform 0.5s ease-in-out";
+        gameCanvas.style.transform = "rotate(10deg)"; // Apply a slight spin
+
+        setTimeout(() => {
+            gameCanvas.style.transform = "rotate(-10deg)"; // Spin the other way
+        }, 500);
+
+        setTimeout(() => {
+            gameCanvas.style.transform = "rotate(0deg)"; // Reset back to normal
+        }, 1000);
+    }
+
+    function resumeGame() {
+        isGameFrozen = false;
+    }
+
+    function checkCollision(piece, obstacle) {
+        if (isLevelTwo){
+            var buffer = 100; // Adjust this value to reduce the collision area
+        }
+        else{
+            var buffer = 70; // Adjust this value to reduce the collision area
+        }
+        let myLeft = myGamePiece.x + buffer;
+        let myRight = myGamePiece.x + myGamePiece.width - buffer;
+        let myTop = myGamePiece.y + buffer;
+        let myBottom = myGamePiece.y + myGamePiece.height - buffer;
+
+        let obstacleLeft = obstacle.x;
+        let obstacleRight = obstacle.x + obstacle.width;
+        let obstacleTop = obstacle.y;
+        let obstacleBottom = obstacle.y + obstacle.height;
+
+        let crash = !(myBottom < obstacleTop || 
+                    myTop > obstacleBottom || 
+                    myRight < obstacleLeft || 
+                    myLeft > obstacleRight);
+        return crash;
+    }
+    function updateLivesDisplay() {
+        for (let i = 0; i < 5; i++) {
+            let lifeElement = document.getElementById(`life${i + 1}`);
+            if (i < lives) {
+                lifeElement.style.visibility = 'visible'; // Show heart for each remaining life
+            } else {
+                lifeElement.style.visibility = 'hidden'; // Hide heart for lost life
+            }
+        }
+    }
+
+    // Decrease lives and reset if necessary
+    function loseLife() {
+        lives--;
+        updateLivesDisplay();
+
+        if (lives <= 0) {
+            endGame(); // Call the end game logic when lives reach zero
+        }
+    }
+
+    function resetLives() {
+        lives = 5; // Reset to 5 lives
+        updateLivesDisplay();
+    }
+
+
+    // Function to handle game ending
+    function endGame() {
+        clearInterval(timerInterval); // Stop the game loop if running
+        myGameArea.clear(); // Clear the game area
+        // Display "Game Over!" in the middle of the screen
+        myGameArea.context.font = "40px Arial"; // Set font size and style
+        myGameArea.context.fillStyle = "white"; // Set text color
+        myGameArea.context.textAlign = "center"; // Center the text horizontally
+        myGameArea.context.fillText("Game Over!", myGameArea.canvas.width / 2, myGameArea.canvas.height / 2);
+        // Add a delay before redirecting to the try again page
+        setTimeout(() => {
+            window.location.href = "TryAgain.html"; // Redirect after 2 seconds
+        }, 11); // 11 ms
+    }
+    function updateSpeedometer(value) {
+        const needle = document.getElementById("needle");
+        const valueLabel = document.getElementById("value-label");
+
+        // Ensure value is within range 0-1
+        value = Math.max(0, Math.min(1, value));
+
+        // Convert value to degrees (0 = 90deg, 1 = 180deg)
+        const degrees = 90 - value * 180;
+
+        // Update needle rotation
+        needle.style.transform = `rotate(${degrees}deg)`;
+
+        // Update value label
+        valueLabel.textContent = value.toFixed(2);
+    }
+
+
+</script>
+</body>
+</html>
