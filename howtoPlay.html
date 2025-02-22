@@ -2,9 +2,9 @@
     Cerebral Palsy Rehabilition Enhancement System Game
     How To Play page
     Author: Erin Lui-Hing, adapted from Main Game page by Logain Sayed Ahmed
-    Updated on: Jan 28th, 2025
+    Updated on: Feb 22nd, 2025
 
-    Updates:  Added key function for user to continue (need to add image with key to press)
+    Updates:  Added code to connect How to play to main game 
     Note: Instructions need to be updated to be kid-friendly language
 -->
 <!DOCTYPE html>
@@ -310,8 +310,10 @@
         myTimer.text = "TIMER: " + countdown + "s";
         if (countdown == 30) {
             displayText("Press P to Keep Practising", 3000);
-            /* How can i avoid the text blinking?*/
             pauseGame = true; 
+            setTimeout(() => {
+            window.location.href = "MainGame.html"; // Redirect after 5 seconds
+        }, 5000); // 5000 milliseconds = 5 seconds
         }
         if (countdown <= 0) {
             myTimer.text = "TIMER: 0s";
@@ -376,5 +378,8 @@
     }
 
 </script>
+
+
+
 </body>
 </html>
